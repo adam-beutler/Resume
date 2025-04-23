@@ -1,0 +1,178 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joke Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        p {
+            margin-bottom: 20px;
+            color: #555;
+        }
+        input[type="text"] {
+            padding: 10px;
+            width: 300px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #joke {
+            margin-top: 20px;
+            font-size: 18px;
+            font-style: italic;
+            color: #333;
+        }
+        #save-favorite {
+            margin-top: 10px;
+            background-color: #007BFF;
+        }
+        #save-favorite:hover {
+            background-color: #0056b3;
+        }
+        #favorites {
+            margin-top: 40px;
+        }
+        #favorite-list li {
+            list-style: none;
+            margin-bottom: 10px;
+            background: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #favorite-list button {
+            background-color: #dc3545;
+        }
+        #favorite-list button:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Joke Generator</h1>
+    <p>Enter a topic to get a joke about it, or leave it blank for a random joke:</p>
+    <input type="text" id="topic" placeholder="e.g., cat, dog, computer (leave blank for random)">
+    <button id="generate">Generate Joke</button>
+    <div id="joke-container">
+        <div id="joke"></div>
+        <button id="save-favorite" style="display: none;">Save to Favorites</button>
+    </div>
+    <div id="favorites">
+        <h2>Favorite Jokes</h2>
+        <ul id="favorite-list"></ul>
+    </div>
+    <script>
+        const topicInput = document.getElementById('topic');
+        const generateBtn = document.getElementById('generate');
+        const jokeDiv = document.getElementById('joke');
+        const saveBtn = document.getElementById('save-favorite');
+        const favoriteList = document.getElementById('favorite-list');
+
+        function loadFavorites() {
+            const favorites = JSON.parse(localStorage.getItem('favoriteJokes')) || [];
+            favoriteList.innerHTML = '';
+            favorites.forEach((joke, index) => {
+                const li = document.createElement('li');
+                li.textContent = joke;
+                const removeBtn = document.createElement('button');
+                removeBtn.textContent = 'Remove';
+                removeBtn.addEventListener('click', () => {
+                    favorites.splice(index, 1);
+                    localStorage.setItem('favoriteJokes', JSON.stringify(favorites));
+                    loadFavorites();
+                });
+                li.appendChild(removeBtn);
+                favoriteList.appendChild(li);
+            });
+        }
+
+        loadFavorites();
+
+        generateBtn.addEventListener('click', () => {
+            const topic = topicInput.value.trim();
+            generateBtn.disabled = true;
+            generateBtn.textContent = 'Generating...';
+            jokeDiv.textContent = 'Loading...';
+            saveBtn.style.display = 'none';
+
+            const url = topic === '' ? 'https://icanhazdadjoke.com/' : `https://icanhazdadjoke.com/search?term=${encodeURIComponent(topic)}`;
+
+            fetch(url, {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (topic === '') {
+                    jokeDiv.textContent = data.joke;
+                    saveBtn.style.display = 'block';
+                } else {
+                    if (data.results.length > 0) {
+                        const randomIndex = Math.floor(Math.random() * data.results.length);
+                        jokeDiv.textContent = data.results[randomIndex].joke;
+                        saveBtn.style.display = 'block';
+                    } else {
+                        jokeDiv.textContent = 'No jokes found for this topic.';
+                        saveBtn.style.display = 'none';
+                    }
+                }
+            })
+            .catch(error => {
+                jokeDiv.textContent = 'Error fetching joke. Please try again.';
+                saveBtn.style.display = 'none';
+                console.error(error);
+            })
+            .finally(() => {
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'Generate Joke';
+            });
+        });
+
+        saveBtn.addEventListener('click', () => {
+            const favorites = JSON.parse(localStorage.getItem('favoriteJokes')) || [];
+            const currentJoke = jokeDiv.textContent;
+            if (!favorites.includes(currentJoke)) {
+                favorites.push(currentJoke);
+                localStorage.setItem('favoriteJokes', JSON.stringify(favorites));
+                loadFavorites();
+                alert('Joke saved to favorites!');
+            } else {
+                alert('This joke is already in favorites.');
+            }
+        });
+
+        topicInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                generateBtn.click();
+            }
+        });
+    </script>
+</body>
+</html>
